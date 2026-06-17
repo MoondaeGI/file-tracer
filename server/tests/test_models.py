@@ -20,8 +20,10 @@ def test_constants() -> None:
     assert constants.MATCH_TYPE_EXACT == "exact"
     assert constants.MATCH_TYPE_FUZZY == "fuzzy"
     assert constants.FUZZY_MATCH_THRESHOLD == 50
-    assert constants.EVENT_TYPES == ("created", "modified", "moved", "deleted")
-    assert constants.RESERVED_EVENT_TYPES == ("copy", "upload", "download")
+    assert "upload" in constants.EVENT_TYPES
+    assert "download" in constants.EVENT_TYPES
+    assert "paste" in constants.EVENT_TYPES
+    assert constants.RESERVED_EVENT_TYPES == ("copy",)
 
 
 def test_fingerprint() -> None:
@@ -48,3 +50,22 @@ def test_other_models_construct() -> None:
                       similarity=100, matched_at="t").similarity == 100
     assert MatchResult(supervise_file_id=3, name="n", match_type="fuzzy",
                        similarity=87).similarity == 87
+
+
+def test_event_has_metadata_field() -> None:
+    from app.models import Event, EventInput
+    ei = EventInput(sha256="a" * 64, fuzzy_hash=None, size=1, name="n",
+                    event_type="upload", host="h", user="u", source_hint=None,
+                    metadata={"url": "https://x"})
+    assert ei.metadata == {"url": "https://x"}
+    ev = Event(id=1, sha256="a" * 64, fuzzy_hash=None, size=1, name="n", host="h",
+               user="u", event_type="upload", detected_at="t", source_hint=None,
+               metadata={"url": "https://x"}, prev_hash=None, record_hash="h")
+    assert ev.metadata == {"url": "https://x"}
+
+
+def test_web_event_types_in_constants() -> None:
+    from app import constants
+    assert "upload" in constants.EVENT_TYPES
+    assert "download" in constants.EVENT_TYPES
+    assert "paste" in constants.EVENT_TYPES

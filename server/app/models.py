@@ -49,6 +49,7 @@ class EventInput:
     host: str | None
     user: str | None
     source_hint: str | None
+    metadata: dict | None = None  # 브라우저 채널 메타(url 등). 마지막+기본값으로 기존 생성 유지.
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,7 @@ class Event:
     source_hint: str | None
     prev_hash: str | None
     record_hash: str
+    metadata: dict | None = None  # 브라우저 채널 메타(url 등). 마지막+기본값으로 기존 생성 유지.
 
 
 @dataclass(frozen=True)
