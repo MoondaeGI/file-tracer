@@ -40,3 +40,16 @@ def test_broken_prev_link_detected() -> None:
     e1 = _event(1, None)
     e2 = _event(2, "wrong")
     assert verify_chain([e1, e2]) == 2
+
+
+def test_metadata_tamper_detected() -> None:
+    """metadata 변조가 해시체인에서 탐지되는지 확인."""
+    def _ev(idx, prev, meta):
+        base = Event(id=idx, sha256=f"{idx:064x}", fuzzy_hash=None, size=1, name="f",
+                     host="PC", user="u", event_type="upload", detected_at="t",
+                     source_hint=None, metadata=meta, prev_hash=prev, record_hash="")
+        return dataclasses.replace(base, record_hash=compute_record_hash(event_payload(base), prev))
+
+    e1 = _ev(1, None, {"url": "https://good"})
+    tampered = dataclasses.replace(e1, metadata={"url": "https://evil"})
+    assert verify_chain([tampered]) == 1

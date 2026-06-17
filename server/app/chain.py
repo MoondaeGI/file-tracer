@@ -13,7 +13,7 @@ from app.models import Event
 # 체인이 보호하는 event 내용 필드(순서 고정).
 _PAYLOAD_FIELDS = (
     "sha256", "fuzzy_hash", "size", "name", "host", "user",
-    "event_type", "detected_at", "source_hint",
+    "event_type", "detected_at", "source_hint", "metadata",
 )
 
 
