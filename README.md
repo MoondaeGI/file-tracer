@@ -39,10 +39,18 @@ Set-Location server
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
 # → http://127.0.0.1:8000/ 에서 위험파일 업로드(baseline 등록)
 
-# 2. 감시 에이전트 기동 (다른 터미널)
+# 2. 엔드포인트 호스트 기동 (다른 터미널)
+#    한 프로세스로 코어(서버 전송) + FS 감시 + 커넥터 intake(:8765)를 띄운다.
 Set-Location client
-..\server\.venv\Scripts\python.exe -m agent.main config.toml
+..\server\.venv\Scripts\python.exe -m main config.toml
 ```
+
+> `config.toml`의 `watch_paths`는 **실재하는 폴더**여야 한다(없으면 기동 시 오류).
+> 빠른 시연용으로는 루트의 `supervise-folder`를 가리키는 `client/config.e2e.toml`을
+> 써도 된다: `... -m main config.e2e.toml`.
+>
+> 브라우저 업로드/다운로드/붙여넣기까지 잡는 **Chrome 커넥터(C++ 브리지) 셋업**은
+> `client/connector/README.md` 참고.
 
 각 프로그램의 설정·테스트 등 자세한 내용은 폴더별 README를 참고한다.
 

@@ -40,12 +40,21 @@ Set-Location client
 # (최초 1회, 서버 venv에 watchdog만 추가 설치)
 ..\server\.venv\Scripts\python.exe -m pip install -r requirements.txt
 
-# 에이전트 기동 (서버가 먼저 떠 있어야 함)
-..\server\.venv\Scripts\python.exe -m agent.main config.toml
+# 호스트 기동 (서버가 먼저 떠 있어야 함)
+#  → 한 프로세스로 코어 + FS 감시 + 커넥터 intake(127.0.0.1:8765)를 띄운다.
+..\server\.venv\Scripts\python.exe -m main config.toml
 ```
+
+> `config.toml`의 `watch_paths`는 실재하는 폴더여야 한다. 빠른 시연은
+> 루트 `supervise-folder`를 가리키는 `config.e2e.toml`로: `... -m main config.e2e.toml`.
 
 `Ctrl+C`로 종료. 감시 폴더에서 파일을 만들고/고치고/지우면 서버
 `http://127.0.0.1:8000/` 의 event 표에 매칭과 함께 뜬다.
+
+**브라우저 채널(upload/download/paste) 테스트**는 Chrome 커넥터가 필요하다 —
+C++ 브리지 빌드·Chrome 정책 셋업은 [`connector/README.md`](connector/README.md) 참고.
+브리지 없이 흉내만 내려면 호스트 기동 후 `http://127.0.0.1:8765/event`로 커넥터 JSON을
+POST하면 된다(루트 README의 시뮬레이션 예시).
 
 ## 테스트
 
