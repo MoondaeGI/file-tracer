@@ -1,0 +1,19 @@
+# Python 가상환경 (상태 관리용 — 추적 안 함)
+.venv/
+server/.venv/
+
+# Python 캐시
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# SQLite 데이터 파일 (런타임 상태)
+*.db
+server/file_tracer.db
+
+# 클라이언트 에이전트 상태(캐시 db·로그)
+client/.state/
+
+# E2E 테스트용(감시 대상 폴더·데모 설정) — 추적 안 함
+supervise-folder/
+client/config.e2e.toml

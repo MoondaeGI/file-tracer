@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>file-tracer</title>
+  <style>
+    body { font-family: sans-serif; max-width: 1000px; margin: 2rem auto; }
+    table { border-collapse: collapse; width: 100%; margin: 0.5rem 0 1.5rem; }
+    th, td { border: 1px solid #ccc; padding: 4px 8px; font-size: 13px; }
+    th { background: #f3f3f3; }
+    #files tbody tr { cursor: pointer; }
+    #files tbody tr:hover { background: #eef; }
+    #detail { border: 2px solid #6a8; background: #f6fbf8; padding: 8px 12px; margin-bottom: 1.5rem; }
+    #detail h3 { margin: 0.2rem 0 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>file-tracer</h1>
+
+  <h2>위험파일 등록 (baseline 업로드)</h2>
+  <form id="upload-form">
+    <input type="file" id="file-input" required />
+    <button type="submit">등록</button>
+  </form>
+
+  <h2>감시 대상 (supervise_file) — <small>행 클릭 시 트레이스</small></h2>
+  <table id="files">
+    <thead><tr><th>id</th><th>name</th><th>sha256</th><th>버전이력</th><th>updated</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <section id="detail" style="display:none">
+    <h3 id="detail-title"></h3>
+    <button id="detail-close">닫기</button>
+    <table>
+      <thead><tr><th>event id</th><th>event</th><th>name</th><th>host</th><th>user</th><th>매칭</th><th>time</th></tr></thead>
+      <tbody id="detail-body"></tbody>
+    </table>
+  </section>
+
+  <h2>이벤트 (event + 매칭)</h2>
+  <table id="events">
+    <thead><tr><th>id</th><th>event</th><th>name</th><th>host</th><th>최고매칭</th><th>time</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const form = document.getElementById('upload-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData();
+      fd.append('file', document.getElementById('file-input').files[0]);
+      await fetch('/api/fingerprints', { method: 'POST', body: fd });
+      await refresh();
+    });
+
+    // 감시 대상 행 클릭 → 해당 baseline의 트레이스(매칭 이벤트) 상세
+    document.querySelector('#files tbody').addEventListener('click', (e) => {
+      const tr = e.target.closest('tr');
+      if (tr && tr.dataset.id) showDetail(tr.dataset.id, tr.dataset.name);
+    });
+    document.getElementById('detail-close').addEventListener('click', () => {
+      document.getElementById('detail').style.display = 'none';
+    });
+
+    async function showDetail(id, name) {
+      const data = await (await fetch(`/api/supervise-files/${id}/events`)).json();
+      document.getElementById('detail-title').textContent = `📄 ${name} 의 트레이스 (매칭 이벤트 ${data.events.length}건)`;
+      document.getElementById('detail-body').innerHTML = data.events.length
+        ? data.events.map(ev =>
+            `<tr><td>${ev.id}</td><td>${ev.event_type}</td><td>${ev.name}</td>` +
+            `<td>${ev.host || '-'}</td><td>${ev.user || '-'}</td>` +
+            `<td>${ev.match.match_type} ${ev.match.similarity}</td><td>${ev.detected_at}</td></tr>`).join('')
+        : '<tr><td colspan="7">매칭된 이벤트가 아직 없습니다.</td></tr>';
+      document.getElementById('detail').style.display = 'block';
+    }
+
+    async function refresh() {
+      const files = (await (await fetch('/api/supervise-files')).json()).supervise_files;
+      document.querySelector('#files tbody').innerHTML = files.map(f =>
+        `<tr data-id="${f.id}" data-name="${f.name}"><td>${f.id}</td><td>${f.name}</td>` +
+        `<td>${f.sha256.slice(0,12)}…</td><td>${f.update_history_count}</td><td>${f.updated_at}</td></tr>`).join('');
+
+      const events = (await (await fetch('/api/events')).json()).events;
+      document.querySelector('#events tbody').innerHTML = events.map(ev => {
+        const bm = ev.best_match
+          ? `${ev.best_match.name} (${ev.best_match.match_type} ${ev.best_match.similarity})`
+          : '-';
+        return `<tr><td>${ev.id}</td><td>${ev.event_type}</td><td>${ev.name}</td>` +
+               `<td>${ev.host || '-'}</td><td>${bm}</td><td>${ev.detected_at}</td></tr>`;
+      }).join('');
+    }
+    refresh();
+  </script>
+</body>
+</html>
