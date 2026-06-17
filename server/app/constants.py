@@ -6,6 +6,9 @@ MATCH_TYPE_FUZZY = "fuzzy"
 # ssdeep 유사도가 이 값 이상이면 fuzzy 매칭으로 포함한다.
 FUZZY_MATCH_THRESHOLD = 50
 
+# 브라우저 채널 이벤트 타입(목적지 URL 저장 대상).
+WEB_EVENT_TYPES = ("upload", "download", "paste")
+
 # 클라이언트가 현재 생성하는 이벤트(로직 처리 대상).
 # upload/download/paste는 브라우저 채널(외부 반출 탐지)로 승격됨.
 EVENT_TYPES = ("created", "modified", "moved", "deleted", "upload", "download", "paste")

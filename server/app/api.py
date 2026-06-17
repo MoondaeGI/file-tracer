@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.constants import WEB_EVENT_TYPES
 from app.errors import HttpError, InvalidFingerprintRequestError
 from app.fingerprint import compute_fuzzy, compute_sha256
 from app.matching import find_matches
@@ -128,7 +129,7 @@ async def _handle_mode_b(request: Request, repository: SqliteRepository) -> dict
     now = _now_iso()
     event = repository.add_event(ev_input, now)
     meta = ev_input.metadata or {}
-    if event.event_type in ("upload", "download", "paste"):
+    if event.event_type in WEB_EVENT_TYPES:
         url = meta.get("url")
         if url:
             repository.add_web_event_detail(event.id, url, meta.get("dst_host"), meta.get("tab_title"))

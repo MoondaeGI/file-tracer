@@ -10,9 +10,6 @@ EVENT_UPLOAD = "upload"
 EVENT_DOWNLOAD = "download"
 EVENT_PASTE = "paste"
 
-# 브라우저 채널(목적지 url 필수)
-WEB_EVENT_TYPES = (EVENT_UPLOAD, EVENT_DOWNLOAD, EVENT_PASTE)
-
 
 @dataclass(frozen=True)
 class TraceEvent:
