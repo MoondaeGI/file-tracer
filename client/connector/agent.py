@@ -4,7 +4,9 @@
 파일 읽기 실패 시 Chrome digest로 폴백(fuzzy=null), 매핑 실패(url 없음 등)는 드롭+로그.
 """
 
+import json
 import logging
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from common.events import TraceEvent
 from common.fingerprint import (
@@ -52,3 +54,28 @@ def handle_request(req: dict, core, host: str) -> bool:
         return False
     core.submit(event)
     return True
+
+
+def serve(core, host: str, port: int) -> HTTPServer:
+    """브리지가 POST /event로 보내는 요청을 받는 로컬 HTTP 서버를 만든다(start는 호출자).
+
+    반환된 HTTPServer를 `serve_forever()`로 실행하거나 `shutdown()`으로 종료한다.
+    """
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length)
+            try:
+                req = json.loads(body)
+                handle_request(req, core, host)
+                self.send_response(200)
+            except Exception:  # 브리지는 응답만 받으면 됨 — 예외를 Chrome에 노출하지 않음
+                logger.exception("intake 처리 실패")
+                self.send_response(500)
+            self.end_headers()
+
+        def log_message(self, *args) -> None:  # 기본 stderr 로깅 끔
+            pass
+
+    return HTTPServer(("127.0.0.1", port), _Handler)
