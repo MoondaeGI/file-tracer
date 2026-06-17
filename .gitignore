@@ -17,3 +17,7 @@ client/.state/
 # E2E 테스트용(감시 대상 폴더·데모 설정) — 추적 안 함
 supervise-folder/
 client/config.e2e.toml
+
+# C++ 브리지 — SDK clone 및 빌드 산출물 (추적 안 함)
+client/connector/bridge/content_analysis_sdk/
+client/connector/bridge/build/
