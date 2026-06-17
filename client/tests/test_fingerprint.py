@@ -6,7 +6,7 @@ from pathlib import Path
 
 import ppdeep
 
-from agent.fingerprint import compute_fuzzy, compute_sha256, fingerprint_file
+from common.fingerprint import compute_fuzzy, compute_sha256, fingerprint_file
 
 # 서버 fingerprint 모듈을 직접 import해 동일성 비교
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "server"))

@@ -14,7 +14,7 @@ from pathlib import Path
 from agent.cache import FingerprintCache
 from agent.config import load_config
 from agent.scanner import initial_scan
-from agent.sender import Sender
+from core.sender import Sender
 from agent.watcher import build_watcher
 
 logger = logging.getLogger("agent")

@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from common.fingerprint import CachedFingerprint  # noqa: F401  (재노출, 하위호환)
+
 EVENT_CREATED = "created"
 EVENT_MODIFIED = "modified"
 EVENT_MOVED = "moved"
@@ -17,15 +19,6 @@ class Config:
     debounce_seconds: float
     watch_paths: tuple[Path, ...]
     ignore_globs: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class CachedFingerprint:
-    """캐시에 저장하는 파일 지문(삭제·이동 시 재사용)."""
-
-    sha256: str
-    fuzzy_hash: str | None
-    size: int
 
 
 @dataclass(frozen=True)

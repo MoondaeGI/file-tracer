@@ -10,8 +10,8 @@ from pathlib import Path
 
 from agent.cache import FingerprintCache
 from agent.events import should_ignore
-from agent.fingerprint import fingerprint_file as _default_fingerprint_file
-from agent.models import CachedFingerprint
+from common.fingerprint import fingerprint_file as _default_fingerprint_file
+from common.fingerprint import CachedFingerprint
 
 logger = logging.getLogger("agent.scanner")
 

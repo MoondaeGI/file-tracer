@@ -11,7 +11,7 @@ from pathlib import Path
 
 from agent.cache import FingerprintCache
 from agent.events import source_hint_for
-from agent.fingerprint import fingerprint_file
+from common.fingerprint import fingerprint_file
 from agent.models import EVENT_CREATED, EVENT_DELETED, EVENT_MODIFIED, EVENT_MOVED, Task
 
 logger = logging.getLogger("agent.worker")

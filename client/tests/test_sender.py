@@ -2,7 +2,7 @@
 
 import httpx
 
-from agent.sender import Sender
+from core.sender import Sender
 
 CAPTURED: list[dict] = []
 
@@ -31,7 +31,7 @@ def test_send_posts_mode_b_payload() -> None:
     assert CAPTURED[-1] == {
         "sha256": "a" * 64, "fuzzy_hash": "3:x", "size": 12, "name": "s.txt",
         "event_type": "created", "host": "PC-1", "user": "kim",
-        "source_hint": "downloads",
+        "source_hint": "downloads", "metadata": None,
     }
 
 
@@ -41,3 +41,14 @@ def test_send_returns_false_on_server_error() -> None:
     ok = sender.send(sha256="a" * 64, fuzzy_hash=None, size=1,
                      name="x", event_type="deleted", source_hint=None)
     assert ok is False
+
+
+def test_send_includes_user_override_and_metadata() -> None:
+    CAPTURED.clear()
+    client = httpx.Client(transport=_ok_transport())
+    sender = Sender("http://srv", host="PC-1", user="default", client=client)
+    sender.send(sha256="a" * 64, fuzzy_hash=None, size=1, name="x",
+                event_type="upload", source_hint=None,
+                user="kim@corp.com", metadata={"url": "https://drive.google.com"})
+    assert CAPTURED[-1]["user"] == "kim@corp.com"
+    assert CAPTURED[-1]["metadata"] == {"url": "https://drive.google.com"}

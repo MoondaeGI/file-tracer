@@ -1,15 +1,19 @@
-"""파일 지문(SHA-256 + ssdeep). 서버 server/app/fingerprint.py와 동일 로직.
-
-지문 동일성 계약(설계 §5): 반드시 raw bytes(바이너리)에서 계산한다. 텍스트 모드·
-줄바꿈 변환이 끼면 서버 baseline과 매칭되지 않는다.
-"""
+"""파일 지문(SHA-256 + ssdeep). 서버 server/app/fingerprint.py와 동일 로직(raw bytes)."""
 
 import hashlib
+from dataclasses import dataclass
 from pathlib import Path
 
 import ppdeep
 
-from agent.models import CachedFingerprint
+
+@dataclass(frozen=True)
+class CachedFingerprint:
+    """캐시·전송에 쓰는 파일 지문."""
+
+    sha256: str
+    fuzzy_hash: str | None
+    size: int
 
 
 def compute_sha256(data: bytes) -> str:
@@ -25,17 +29,7 @@ def compute_fuzzy(data: bytes) -> str | None:
 
 
 def fingerprint_file(path: Path) -> CachedFingerprint:
-    """파일을 raw bytes로 읽어 지문을 계산한다.
-
-    Args:
-        path: 대상 파일 경로.
-
-    Returns:
-        sha256·fuzzy_hash·size를 담은 CachedFingerprint.
-
-    Raises:
-        OSError: 파일 열기·읽기 실패(잠김 등) 시.
-    """
+    """파일을 raw bytes로 읽어 지문을 계산한다."""
     data = path.read_bytes()
     return CachedFingerprint(
         sha256=compute_sha256(data),
