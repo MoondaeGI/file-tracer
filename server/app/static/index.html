@@ -40,7 +40,7 @@
 
   <h2>이벤트 (event + 매칭)</h2>
   <table id="events">
-    <thead><tr><th>id</th><th>event</th><th>name</th><th>host</th><th>최고매칭</th><th>time</th></tr></thead>
+    <thead><tr><th>id</th><th>event</th><th>name</th><th>host</th><th>목적지</th><th>최고매칭</th><th>time</th></tr></thead>
     <tbody></tbody>
   </table>
 
@@ -87,7 +87,7 @@
           ? `${ev.best_match.name} (${ev.best_match.match_type} ${ev.best_match.similarity})`
           : '-';
         return `<tr><td>${ev.id}</td><td>${ev.event_type}</td><td>${ev.name}</td>` +
-               `<td>${ev.host || '-'}</td><td>${bm}</td><td>${ev.detected_at}</td></tr>`;
+               `<td>${ev.host || '-'}</td><td>${ev.url || '-'}</td><td>${bm}</td><td>${ev.detected_at}</td></tr>`;
       }).join('');
     }
     refresh();
