@@ -33,13 +33,15 @@
 Python 가상환경은 **`server/.venv` 하나를 서버·클라이언트가 공유**한다
 (클라이언트의 watchdog까지 모두 여기에 설치).
 
-```powershell
-# 1. 서버 기동 (한 터미널)
-Set-Location server
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
+<!-- 1. 서버 기동 (한 터미널) — 서버는 FastAPI라 플랫폼 무관, bash로 기동 -->
+```bash
+cd server
+.venv/Scripts/python.exe -m uvicorn app.main:app --port 8000
 # → http://127.0.0.1:8000/ 에서 위험파일 업로드(baseline 등록)
+```
 
-# 2. 엔드포인트 호스트 기동 (다른 터미널)
+```powershell
+# 2. 엔드포인트 호스트 기동 (다른 터미널) — Windows 엔드포인트 에이전트라 PowerShell
 #    한 프로세스로 코어(서버 전송) + FS 감시 + 커넥터 intake(:8765)를 띄운다.
 Set-Location client
 ..\server\.venv\Scripts\python.exe -m main config.toml

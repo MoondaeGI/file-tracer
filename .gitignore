@@ -18,6 +18,9 @@ client/.state/
 supervise-folder/
 client/config.e2e.toml
 
+# 브레인스토밍 시각 컴패니언 상태(목업·이벤트) — 추적 안 함
+.superpowers/
+
 # C++ 브리지 — SDK clone 및 빌드 산출물 (추적 안 함)
 client/connector/bridge/content_analysis_sdk/
 client/connector/bridge/build/
