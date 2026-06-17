@@ -4,6 +4,7 @@
 db_path에 ":memory:"를 주면 인메모리(테스트용).
 """
 
+import json
 import sqlite3
 import threading
 from collections.abc import Sequence
@@ -36,13 +37,19 @@ CREATE TABLE IF NOT EXISTS event (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   sha256 TEXT NOT NULL, fuzzy_hash TEXT, size INTEGER NOT NULL, name TEXT NOT NULL,
   host TEXT, user TEXT, event_type TEXT NOT NULL, detected_at TEXT NOT NULL,
-  source_hint TEXT, prev_hash TEXT, record_hash TEXT NOT NULL
+  source_hint TEXT, metadata TEXT, prev_hash TEXT, record_hash TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS trace_match (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   event_id INTEGER NOT NULL REFERENCES event(id),
   supervise_file_id INTEGER NOT NULL REFERENCES supervise_file(id),
   match_type TEXT NOT NULL, similarity INTEGER NOT NULL, matched_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS web_event_detail (
+  event_id  INTEGER PRIMARY KEY REFERENCES event(id),
+  url       TEXT NOT NULL,
+  dst_host  TEXT,
+  tab_title TEXT
 );
 """
 
@@ -137,17 +144,18 @@ class SqliteRepository:
             cur = self._conn.execute("SELECT record_hash FROM event ORDER BY id DESC LIMIT 1")
             last = cur.fetchone()
             prev_hash = last["record_hash"] if last else None
+            metadata_json = json.dumps(ev.metadata, sort_keys=True, ensure_ascii=False) if ev.metadata else None
             draft = Event(id=0, sha256=ev.sha256, fuzzy_hash=ev.fuzzy_hash, size=ev.size,
                           name=ev.name, host=ev.host, user=ev.user, event_type=ev.event_type,
-                          detected_at=now, source_hint=ev.source_hint,
+                          detected_at=now, source_hint=ev.source_hint, metadata=ev.metadata,
                           prev_hash=prev_hash, record_hash="")
             record_hash = compute_record_hash(event_payload(draft), prev_hash)
             cur = self._conn.execute(
                 "INSERT INTO event (sha256, fuzzy_hash, size, name, host, user, event_type, "
-                "detected_at, source_hint, prev_hash, record_hash) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "detected_at, source_hint, metadata, prev_hash, record_hash) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (ev.sha256, ev.fuzzy_hash, ev.size, ev.name, ev.host, ev.user,
-                 ev.event_type, now, ev.source_hint, prev_hash, record_hash),
+                 ev.event_type, now, ev.source_hint, metadata_json, prev_hash, record_hash),
             )
             self._conn.commit()
             return replace(draft, id=cur.lastrowid, record_hash=record_hash)
@@ -157,7 +165,8 @@ class SqliteRepository:
                      size=row["size"], name=row["name"], host=row["host"], user=row["user"],
                      event_type=row["event_type"], detected_at=row["detected_at"],
                      source_hint=row["source_hint"], prev_hash=row["prev_hash"],
-                     record_hash=row["record_hash"])
+                     record_hash=row["record_hash"],
+                     metadata=json.loads(row["metadata"]) if row["metadata"] else None)
 
     def list_events(self, limit: int) -> tuple[Event, ...]:
         """최근 이벤트를 id 내림차순으로 최대 limit개 반환한다."""
@@ -187,6 +196,28 @@ class SqliteRepository:
                                         matched_at=now))
             self._conn.commit()
         return saved
+
+    def add_web_event_detail(self, event_id: int, url: str,
+                             dst_host: str | None, tab_title: str | None) -> None:
+        """브라우저 이벤트의 url 등 detail을 저장한다(event당 1행)."""
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO web_event_detail (event_id, url, dst_host, tab_title) "
+                "VALUES (?, ?, ?, ?)",
+                (event_id, url, dst_host, tab_title),
+            )
+            self._conn.commit()
+
+    def get_web_event_detail(self, event_id: int) -> dict | None:
+        """브라우저 이벤트 detail을 반환(없으면 None)."""
+        cur = self._conn.execute(
+            "SELECT url, dst_host, tab_title FROM web_event_detail WHERE event_id = ?",
+            (event_id,),
+        )
+        row = cur.fetchone()
+        if row is None:
+            return None
+        return {"url": row["url"], "dst_host": row["dst_host"], "tab_title": row["tab_title"]}
 
     def best_trace_match(self, event_id: int) -> TraceMatch | None:
         """이벤트의 최고 유사도 매칭 1건(없으면 None)."""

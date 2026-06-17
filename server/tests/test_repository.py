@@ -122,3 +122,25 @@ def test_events_matching_supervise_file_empty() -> None:
     repo = SqliteRepository(":memory:")
     sf, _ = repo.register_supervise_file("d.txt", _fp("a"), NOW)
     assert repo.events_matching_supervise_file(sf.id) == []
+
+
+def test_add_event_persists_metadata() -> None:
+    from app.repository import SqliteRepository
+    from app.models import EventInput
+    repo = SqliteRepository(":memory:")
+    ei = EventInput(sha256="a" * 64, fuzzy_hash=None, size=1, name="n",
+                    event_type="upload", host="h", user="u", source_hint=None,
+                    metadata={"url": "https://x"})
+    ev = repo.add_event(ei, "2026-06-17T00:00:00+00:00")
+    assert ev.metadata == {"url": "https://x"}
+    assert repo.all_events()[0].metadata == {"url": "https://x"}
+
+
+def test_web_event_detail_roundtrip() -> None:
+    from app.repository import SqliteRepository
+    repo = SqliteRepository(":memory:")
+    repo.add_web_event_detail(1, "https://drive.google.com/x", "drive.google.com", "Drive")
+    got = repo.get_web_event_detail(1)
+    assert got == {"url": "https://drive.google.com/x",
+                   "dst_host": "drive.google.com", "tab_title": "Drive"}
+    assert repo.get_web_event_detail(999) is None
