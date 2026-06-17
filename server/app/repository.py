@@ -55,6 +55,12 @@ CREATE TABLE IF NOT EXISTS web_event_detail (
 
 _SF_COLS = ("id", "name", "sha256", "fuzzy_hash", "size", "created_at", "updated_at")
 
+# 옛 DB 호환: CREATE TABLE IF NOT EXISTS는 기존 테이블에 새 컬럼을 붙이지 않으므로,
+# 스키마가 진화하며 추가된 컬럼을 시작 시 보강한다. (table, column, 선언)
+_MIGRATIONS = (
+    ("event", "metadata", "TEXT"),
+)
+
 
 class SqliteRepository:
     """4개 테이블을 관리하는 SQLite 저장소."""
@@ -64,6 +70,16 @@ class SqliteRepository:
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
+        self._conn.commit()
+        self._migrate()
+
+    def _migrate(self) -> None:
+        """기존 DB에 누락된 컬럼을 추가한다(스키마 진화 호환). 컬럼은 내부 상수만 사용."""
+        for table, column, decl in _MIGRATIONS:
+            cur = self._conn.execute(f"PRAGMA table_info({table})")
+            cols = {row[1] for row in cur.fetchall()}
+            if cols and column not in cols:
+                self._conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
         self._conn.commit()
 
     def _sf_from_row(self, row: sqlite3.Row) -> SuperviseFile:

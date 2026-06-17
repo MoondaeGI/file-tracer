@@ -144,3 +144,31 @@ def test_web_event_detail_roundtrip() -> None:
     assert got == {"url": "https://drive.google.com/x",
                    "dst_host": "drive.google.com", "tab_title": "Drive"}
     assert repo.get_web_event_detail(999) is None
+
+
+def test_migrates_old_db_missing_metadata_column(tmp_path) -> None:
+    """metadata 컬럼이 없던 옛 event 테이블을 열면 자동으로 컬럼을 보강한다."""
+    import sqlite3
+
+    from app.repository import SqliteRepository
+
+    db = tmp_path / "old.db"
+    conn = sqlite3.connect(db)
+    conn.execute(
+        "CREATE TABLE event (id INTEGER PRIMARY KEY AUTOINCREMENT, sha256 TEXT NOT NULL, "
+        "fuzzy_hash TEXT, size INTEGER NOT NULL, name TEXT NOT NULL, host TEXT, user TEXT, "
+        "event_type TEXT NOT NULL, detected_at TEXT NOT NULL, source_hint TEXT, "
+        "prev_hash TEXT, record_hash TEXT NOT NULL)"
+    )
+    conn.execute(
+        "INSERT INTO event (sha256, size, name, event_type, detected_at, record_hash) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        ("a" * 64, 1, "old.txt", "created", "t", "h"),
+    )
+    conn.commit()
+    conn.close()
+
+    repo = SqliteRepository(str(db))  # 마이그레이션이 metadata 컬럼 추가
+    events = repo.list_events(limit=10)
+    assert len(events) == 1
+    assert events[0].metadata is None  # 옛 행은 metadata 없음 → None
