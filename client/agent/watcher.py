@@ -1,7 +1,7 @@
 """watchdog 핸들러와 파이프라인 배선. 이벤트 → 디바운스 → 워커 큐.
 
 watchdog 콜백 스레드는 디바운서에 등록만 한다. 디바운스 발화 시 Task를 워커 큐에
-넣고, 단일 워커가 해싱·전송한다.
+넣고, 단일 워커가 해싱·코어 제출한다.
 """
 
 import logging
@@ -82,11 +82,11 @@ def build_watcher(
     watch_paths,
     ignore_globs,
     cache: FingerprintCache,
-    sender,
+    core,
     debounce_seconds: float,
 ) -> Watcher:
     """파이프라인을 배선한 Watcher를 만든다."""
-    worker = Worker(cache, sender)
+    worker = Worker(cache, core)
 
     def on_fire(path: str, pending: Pending) -> None:
         worker.submit(Task(path=path, event_type=pending.event_type,

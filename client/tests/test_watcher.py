@@ -1,6 +1,6 @@
 """통합: 실제 watchdog watcher가 파일 이벤트를 올바른 Task로 전달하는지.
 
-디바운스를 0.1초로 두고, FakeSender 호출을 폴링으로 기다려 flaky를 방지한다.
+디바운스를 0.1초로 두고, FakeCore 호출을 폴링으로 기다려 flaky를 방지한다.
 """
 
 import time
@@ -8,15 +8,15 @@ from pathlib import Path
 
 from agent.cache import FingerprintCache
 from agent.watcher import build_watcher
+from common.events import TraceEvent
 
 
-class FakeSender:
+class FakeCore:
     def __init__(self) -> None:
-        self.calls: list[dict] = []
+        self.events: list[TraceEvent] = []
 
-    def send(self, **kwargs) -> bool:
-        self.calls.append(kwargs)
-        return True
+    def submit(self, event: TraceEvent) -> None:
+        self.events.append(event)
 
 
 def _wait_for(predicate, timeout: float = 5.0) -> bool:
@@ -32,18 +32,18 @@ def test_created_then_deleted_flow(tmp_path: Path) -> None:
     watch = tmp_path / "w"
     watch.mkdir()
     cache = FingerprintCache(tmp_path / "c.db")
-    sender = FakeSender()
+    core = FakeCore()
     watcher = build_watcher(
         watch_paths=(watch,), ignore_globs=("*.tmp",),
-        cache=cache, sender=sender, debounce_seconds=0.1,
+        cache=cache, core=core, debounce_seconds=0.1,
     )
     watcher.start()
     try:
         f = watch / "secret.txt"
         f.write_bytes(b"confidential bytes here for test")
-        assert _wait_for(lambda: any(c["event_type"] in ("created", "modified")
-                                     for c in sender.calls))
+        assert _wait_for(lambda: any(e.event_type in ("created", "modified")
+                                     for e in core.events))
         f.unlink()
-        assert _wait_for(lambda: any(c["event_type"] == "deleted" for c in sender.calls))
+        assert _wait_for(lambda: any(e.event_type == "deleted" for e in core.events))
     finally:
         watcher.stop()

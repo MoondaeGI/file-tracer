@@ -1,18 +1,21 @@
-"""단일 워커 큐 — 해싱·전송을 순차 처리해 백프레셔를 제공한다(설계 §6).
+"""단일 워커 큐 — 해싱·코어 제출을 순차 처리해 백프레셔를 제공한다(설계 §6).
 
-발화 시점의 파일 존재 여부가 최종 심판이다: 존재하면 해싱·전송(created/modified/moved),
-없으면 캐시의 기억된 지문으로 deleted 전송(캐시에 없으면 스킵).
+발화 시점의 파일 존재 여부가 최종 심판이다: 존재하면 해싱·TraceEvent 생성·코어 제출
+(created/modified/moved), 없으면 캐시의 기억된 지문으로 deleted TraceEvent를 코어에
+제출(캐시에 없으면 스킵).
 """
 
 import logging
 import queue
+import socket
 import threading
 from pathlib import Path
 
 from agent.cache import FingerprintCache
 from agent.events import source_hint_for
+from common.events import EVENT_DELETED, TraceEvent
 from common.fingerprint import fingerprint_file
-from agent.models import EVENT_CREATED, EVENT_DELETED, EVENT_MODIFIED, EVENT_MOVED, Task
+from agent.models import EVENT_CREATED, EVENT_MODIFIED, EVENT_MOVED, Task
 
 logger = logging.getLogger("agent.worker")
 
@@ -20,10 +23,11 @@ logger = logging.getLogger("agent.worker")
 class Worker:
     """Task를 순차 처리하는 단일 워커 스레드."""
 
-    def __init__(self, cache: FingerprintCache, sender, fingerprint_file=fingerprint_file) -> None:
+    def __init__(self, cache: FingerprintCache, core, fingerprint_file=fingerprint_file) -> None:
         self._cache = cache
-        self._sender = sender
+        self._core = core
         self._fingerprint_file = fingerprint_file
+        self._host = socket.gethostname()
         self._queue: queue.Queue = queue.Queue()
         self._thread = threading.Thread(target=self._run, daemon=True)
 
@@ -73,19 +77,19 @@ class Worker:
                 event_type = EVENT_MODIFIED
             else:
                 event_type = EVENT_CREATED
-            self._sender.send(
+            self._core.submit(TraceEvent(
                 sha256=fp.sha256, fuzzy_hash=fp.fuzzy_hash, size=fp.size,
-                name=path.name, event_type=event_type,
-                source_hint=source_hint_for(task.path),
-            )
+                name=path.name, event_type=event_type, host=self._host,
+                user=None, source_hint=source_hint_for(task.path), metadata=None,
+            ))
             return
 
         cached = self._cache.pop(task.path)
         if cached is None:
             logger.info("삭제 이벤트지만 캐시에 지문 없음, 스킵: %s", task.path)
             return
-        self._sender.send(
+        self._core.submit(TraceEvent(
             sha256=cached.sha256, fuzzy_hash=cached.fuzzy_hash, size=cached.size,
-            name=path.name, event_type=EVENT_DELETED,
-            source_hint=source_hint_for(task.path),
-        )
+            name=path.name, event_type=EVENT_DELETED, host=self._host,
+            user=None, source_hint=source_hint_for(task.path), metadata=None,
+        ))
