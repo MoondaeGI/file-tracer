@@ -45,3 +45,13 @@ def test_missing_url_drops_event() -> None:
     core = FakeCore()
     assert handle_request(req, core, host="PC") is False
     assert core.events == []
+
+
+def test_fingerprinted_but_missing_url_drops_event(tmp_path: Path) -> None:
+    f = tmp_path / "x.txt"
+    f.write_bytes(b"data for fingerprint but no destination url")
+    req = {"connector": "FILE_ATTACHED", "filename": "x.txt",
+           "file_path": str(f), "url": None, "email": "u", "text_content": None}
+    core = FakeCore()
+    assert handle_request(req, core, host="PC") is False
+    assert core.events == []
