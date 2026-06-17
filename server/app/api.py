@@ -60,10 +60,12 @@ def build_app(repository: SqliteRepository) -> FastAPI:
                 best_dict = {"supervise_file_id": best.supervise_file_id,
                              "name": sf.name if sf else None,
                              "match_type": best.match_type, "similarity": best.similarity}
+            detail = repository.get_web_event_detail(ev.id)
             items.append({
                 "id": ev.id, "sha256": ev.sha256, "name": ev.name,
                 "event_type": ev.event_type, "host": ev.host, "user": ev.user,
                 "detected_at": ev.detected_at, "best_match": best_dict,
+                "url": detail["url"] if detail else None,
             })
         return {"events": items}
 
@@ -121,9 +123,15 @@ async def _handle_mode_b(request: Request, repository: SqliteRepository) -> dict
         event_type=payload.get("event_type", "created"),
         host=payload.get("host"), user=payload.get("user"),
         source_hint=payload.get("source_hint"),
+        metadata=payload.get("metadata"),
     )
     now = _now_iso()
     event = repository.add_event(ev_input, now)
+    meta = ev_input.metadata or {}
+    if event.event_type in ("upload", "download", "paste"):
+        url = meta.get("url")
+        if url:
+            repository.add_web_event_detail(event.id, url, meta.get("dst_host"), meta.get("tab_title"))
     matches = find_matches(event.sha256, event.fuzzy_hash, repository.list_supervise_files())
     repository.add_trace_matches(event.id, matches, now)
     return {

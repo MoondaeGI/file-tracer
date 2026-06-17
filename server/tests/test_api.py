@@ -88,3 +88,15 @@ def test_supervise_file_events_endpoint(client) -> None:
 
 def test_supervise_file_events_404_for_unknown(client) -> None:
     assert client.get("/api/supervise-files/999/events").status_code == 404
+
+
+def test_mode_b_upload_stores_url(client) -> None:
+    payload = {"sha256": "a" * 64, "fuzzy_hash": None, "size": 5, "name": "s.dwg",
+               "event_type": "upload", "host": "PC", "user": "kim@corp.com",
+               "metadata": {"url": "https://drive.google.com/x",
+                            "dst_host": "drive.google.com", "tab_title": "Drive"}}
+    r = client.post("/api/fingerprints", json=payload)
+    assert r.status_code == 200
+    events = client.get("/api/events").json()["events"]
+    assert events[0]["event_type"] == "upload"
+    assert events[0]["url"] == "https://drive.google.com/x"
