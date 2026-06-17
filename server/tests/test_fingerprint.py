@@ -2,7 +2,7 @@
 
 import hashlib
 
-from app.fingerprint import compute_fuzzy, compute_sha256, fuzzy_similarity
+from app.domain.fingerprint import compute_fuzzy, compute_sha256, fuzzy_similarity
 
 
 def test_sha256_matches_hashlib() -> None:

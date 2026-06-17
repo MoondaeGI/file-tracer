@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 
-from app.chain import compute_record_hash, event_payload
+from app.domain.chain import compute_record_hash, event_payload
 from app.models import (
     Event,
     EventInput,

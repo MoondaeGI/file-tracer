@@ -1,7 +1,7 @@
 """supervise_file 대상 매칭 테스트."""
 
-from app.fingerprint import compute_fuzzy
-from app.matching import find_matches
+from app.domain.fingerprint import compute_fuzzy
+from app.domain.matching import find_matches
 from app.models import SuperviseFile
 
 

@@ -2,7 +2,7 @@
 
 import dataclasses
 
-from app.chain import compute_record_hash, event_payload, verify_chain
+from app.domain.chain import compute_record_hash, event_payload, verify_chain
 from app.models import Event
 
 

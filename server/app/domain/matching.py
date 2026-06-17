@@ -7,7 +7,7 @@ SHA 동일은 exact(100). 아니면 양쪽 fuzzy_hash가 모두 있을 때 ssdee
 from collections.abc import Sequence
 
 from app.constants import FUZZY_MATCH_THRESHOLD, MATCH_TYPE_EXACT, MATCH_TYPE_FUZZY
-from app.fingerprint import fuzzy_similarity
+from app.domain.fingerprint import fuzzy_similarity
 from app.models import MatchResult, SuperviseFile
 
 

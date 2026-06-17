@@ -49,7 +49,7 @@ def test_get_supervise_file() -> None:
     assert repo.get_supervise_file(999) is None
 
 
-from app.chain import verify_chain
+from app.domain.chain import verify_chain
 from app.models import EventInput, MatchResult
 
 

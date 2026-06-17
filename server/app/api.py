@@ -7,12 +7,10 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.constants import WEB_EVENT_TYPES
 from app.errors import HttpError, InvalidFingerprintRequestError
-from app.fingerprint import compute_fuzzy, compute_sha256
-from app.matching import find_matches
-from app.models import EventInput, Fingerprint
+from app.models import EventInput
 from app.repository import SqliteRepository
+from app.services import events, registration
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -102,8 +100,9 @@ async def _handle_mode_a(request: Request, repository: SqliteRepository) -> dict
     if upload is None:
         raise InvalidFingerprintRequestError("file 필드가 필요합니다")
     data = await upload.read()
-    fp = Fingerprint(sha256=compute_sha256(data), fuzzy_hash=compute_fuzzy(data), size=len(data))
-    sf, was_update = repository.register_supervise_file(upload.filename or "unknown", fp, _now_iso())
+    sf, was_update = registration.register(
+        repository, upload.filename or "unknown", data, _now_iso()
+    )
     return {
         "was_update": was_update,
         "supervise_file": {"id": sf.id, "name": sf.name, "sha256": sf.sha256,
@@ -126,15 +125,7 @@ async def _handle_mode_b(request: Request, repository: SqliteRepository) -> dict
         source_hint=payload.get("source_hint"),
         metadata=payload.get("metadata"),
     )
-    now = _now_iso()
-    event = repository.add_event(ev_input, now)
-    meta = ev_input.metadata or {}
-    if event.event_type in WEB_EVENT_TYPES:
-        url = meta.get("url")
-        if url:
-            repository.add_web_event_detail(event.id, url, meta.get("dst_host"), meta.get("tab_title"))
-    matches = find_matches(event.sha256, event.fuzzy_hash, repository.list_supervise_files())
-    repository.add_trace_matches(event.id, matches, now)
+    event, matches = events.record_event(repository, ev_input, _now_iso())
     return {
         "event_id": event.id,
         "matches": [{"supervise_file_id": m.supervise_file_id, "name": m.name,
