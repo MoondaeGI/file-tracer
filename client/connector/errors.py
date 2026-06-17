@@ -1,0 +1,5 @@
+"""커넥터 커스텀 예외."""
+
+
+class MappingError(Exception):
+    """커넥터 요청을 TraceEvent로 매핑할 수 없음(필수 필드 누락·미지원 종류)."""
