@@ -386,6 +386,11 @@ EVENT_TYPES = ("created", "modified", "moved", "deleted", "upload", "download", 
 RESERVED_EVENT_TYPES = ("copy",)  # upload/download는 승격됨
 ```
 
+> **기존 테스트 갱신(필수):** 현재 `server/tests/test_models.py`의 `test_constants`가
+> `RESERVED_EVENT_TYPES == ("copy", "upload", "download")`를 단언한다. 이걸
+> `RESERVED_EVENT_TYPES == ("copy",)`로 바꾸고, `EVENT_TYPES`에 upload/download/paste가
+> 포함됨을 단언하도록 갱신한다(안 그러면 이 기존 테스트가 깨짐).
+
 `server/app/models.py`의 `EventInput`·`Event`에 `metadata: dict | None` 필드 추가:
 ```python
 @dataclass(frozen=True)
@@ -413,14 +418,22 @@ class Event:
     event_type: str
     detected_at: str
     source_hint: str | None
-    metadata: dict | None
     prev_hash: str | None
     record_hash: str
+    metadata: dict | None = None   # ★ 마지막+기본값: 기존 Event(...) 생성을 안 깨뜨림
 ```
 
-- [ ] **Step 4: 통과 확인**
+> **순서 주의(green 유지):** `metadata`는 반드시 **마지막 필드 + 기본값 `None`**으로 둔다.
+> 중간에 넣으면 (a) 뒤의 무default 필드(prev_hash/record_hash)와 dataclass 규칙 충돌,
+> (b) 기존 `repository.add_event`·테스트들의 `Event(...)` 생성이 인자 부족으로 깨진다.
+> 마지막+기본값이면 기존 생성은 `metadata=None`으로 그대로 동작하고, 실제 값 배선은
+> Task 5(repository)·Task 6(api)에서 한다. `chain`은 `getattr` 기반이라 위치 무관(Task 4).
+
+- [ ] **Step 4: 통과 확인 (test_models + 서버 전체 회귀)**
 
 Run: `… -m pytest tests/test_models.py -v` → PASS
+이어서 **서버 전체**: `… -m pytest -v` → 전부 PASS. metadata를 마지막+기본값으로 둬서
+repository/chain/api 기존 테스트가 안 깨져야 한다(깨지면 metadata 필드 위치 점검).
 
 - [ ] **Step 5: 커밋**
 
